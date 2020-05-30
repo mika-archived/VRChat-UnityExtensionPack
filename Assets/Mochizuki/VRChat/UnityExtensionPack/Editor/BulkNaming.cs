@@ -12,7 +12,7 @@ using UnityEditor;
 
 using UnityEngine;
 
-namespace Mochizuki.VRCUtilities
+namespace Mochizuki.VRChat.UnityExtensionPack
 {
     public class BulkNaming : EditorWindow
     {

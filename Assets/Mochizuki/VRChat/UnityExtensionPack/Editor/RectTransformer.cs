@@ -9,19 +9,20 @@ using System.Linq;
 using UnityEditor;
 
 using UnityEngine;
-using UnityEngine.UI;
 
-namespace Mochizuki.VRCUtilities
+namespace Mochizuki.VRChat.UnityExtensionPack
 {
-    public class ObjectNameToText : EditorWindow
+    public class RectTransformer : EditorWindow
     {
-        private List<GameObject> _gameObjects;
+        private Vector3 _positionOffset;
+        private Vector3 _rotationOffset; // euler
+        private List<RectTransform> _transforms;
 
-        [MenuItem("Mochizuki/VRC Utilities/ObjectNameToText")]
+        [MenuItem("Mochizuki/VRC Utilities/RectTransformer")]
         public static void ShowEditorWindow()
         {
-            var window = GetWindow<ObjectNameToText>();
-            window.titleContent = new GUIContent("ObjectName To Text");
+            var window = GetWindow<RectTransformer>();
+            window.titleContent = new GUIContent("Rect Transformer");
 
             window.Show();
         }
@@ -32,7 +33,7 @@ namespace Mochizuki.VRCUtilities
 
             EditorGUILayout.BeginVertical(GUI.skin.box);
             EditorGUILayout.LabelField("Description", new GUIStyle { fontStyle = FontStyle.Bold });
-            EditorGUILayout.LabelField("Matches the value of the first Text Component contained in the descendant object to the name of the Game Object. This change is disruptive. Please check it carefully before operation.", new GUIStyle { wordWrap = true });
+            EditorGUILayout.LabelField("Changes multiple RectTransform values at once with the same operating criteria. This change is disruptive. Please check it carefully before operation.", new GUIStyle { wordWrap = true });
             EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space();
@@ -52,33 +53,39 @@ namespace Mochizuki.VRCUtilities
                     case EventType.DragPerform:
                         DragAndDrop.AcceptDrag();
 
-                        _gameObjects = DragAndDrop.objectReferences?.Where(w => w is GameObject).Cast<GameObject>().Where(w => w.GetComponentInChildren<Text>() != null).ToList();
+                        _transforms = DragAndDrop.objectReferences?.Where(w => w is GameObject).Select(w => ((GameObject) w).GetComponent<RectTransform>()).Where(w => w != null).ToList();
 
                         DragAndDrop.activeControlID = 0;
                         Event.current.Use();
                         break;
                 }
 
-            if (_gameObjects == null || _gameObjects.Count == 0)
+            if (_transforms == null || _transforms.Count == 0)
                 return;
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Target GameObjects are");
+            EditorGUILayout.LabelField("Target RectTransforms are");
 
             EditorGUI.BeginDisabledGroup(true);
-            foreach (var gameObject in _gameObjects) EditorGUILayout.ObjectField("GameObject", gameObject, typeof(RectTransform), false);
+            foreach (var transform in _transforms) EditorGUILayout.ObjectField("RectTransform", transform, typeof(RectTransform), false);
             EditorGUI.EndDisabledGroup();
 
-            if (GUILayout.Button("Apply (Breaking Changes)"))
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Transform RectTransforms Configurations");
+
+            _positionOffset = EditorGUILayout.Vector3Field("Position Offset from Current", _positionOffset);
+            _rotationOffset = EditorGUILayout.Vector3Field("Rotation Offset from Current", _rotationOffset);
+
+            if (GUILayout.Button("Apply Transform Modifications (Breaking Changes)"))
             {
-                foreach (var gameObject in _gameObjects)
+                foreach (var transform in _transforms)
                 {
-                    var objectName = gameObject.name;
-                    var first = gameObject.GetComponentInChildren<Text>();
-                    first.text = objectName;
+                    transform.localPosition += _positionOffset;
+                    transform.localRotation = transform.localRotation * Quaternion.Euler(_rotationOffset);
                 }
 
-                _gameObjects.Clear();
+                _positionOffset = Vector3.zero;
+                _transforms.Clear();
             }
         }
     }
